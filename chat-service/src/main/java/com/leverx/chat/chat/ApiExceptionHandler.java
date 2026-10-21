@@ -7,6 +7,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
@@ -23,6 +24,11 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                 .map(error -> error.getField() + " " + error.getDefaultMessage())
                 .collect(Collectors.joining("; "));
         return problem(HttpStatus.BAD_REQUEST, detail);
+    }
+
+    @ExceptionHandler(ChatUnavailableException.class)
+    ResponseEntity<Object> handleUnavailable(ChatUnavailableException ex) {
+        return problem(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
     }
 
     // The chat endpoint produces text/event-stream, so the content type is set explicitly for error bodies
