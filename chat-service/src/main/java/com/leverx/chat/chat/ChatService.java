@@ -7,6 +7,11 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
+import java.time.DateTimeException;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
@@ -31,7 +36,13 @@ public class ChatService {
             throw new ChatUnavailableException(
                     "Gemini API key is not configured. Set GEMINI_API_KEY for chat-service and restart it.");
         }
+        var zone = resolveZone(timeZone);
         var answer = chatClient.prompt()
+                .system(s -> s
+                        .param("userName", String.valueOf(user.getClaimAsString("name")))
+                        .param("userEmail", String.valueOf(user.getClaimAsString("email")))
+                        .param("now", ZonedDateTime.now(zone).format(DateTimeFormatter.ofPattern("EEEE, yyyy-MM-dd HH:mm")))
+                        .param("timeZone", zone.getId()))
                 .user(message)
                 .call()
                 .content();
@@ -47,5 +58,13 @@ public class ChatService {
 
     public void clear(Jwt user) {
         // nothing is stored yet
+    }
+
+    private static ZoneId resolveZone(String timeZone) {
+        try {
+            return timeZone == null || timeZone.isBlank() ? ZoneOffset.UTC : ZoneId.of(timeZone);
+        } catch (DateTimeException e) {
+            return ZoneOffset.UTC;
+        }
     }
 }
