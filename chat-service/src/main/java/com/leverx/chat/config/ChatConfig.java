@@ -1,6 +1,11 @@
 package com.leverx.chat.config;
 
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.memory.InMemoryChatMemoryRepository;
+import org.springframework.ai.chat.memory.MessageWindowChatMemory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -18,10 +23,22 @@ public class ChatConfig {
             Current date and time for the user: {now} ({timeZone}).
             """;
 
+    /**
+     * Keeps the last messages of every conversation in memory, so the history is lost when chat-service restarts.
+     */
     @Bean
-    ChatClient chatClient(ChatClient.Builder builder) {
+    ChatMemory chatMemory(@Value("${chat.memory.max-messages}") int maxMessages) {
+        return MessageWindowChatMemory.builder()
+                .chatMemoryRepository(new InMemoryChatMemoryRepository())
+                .maxMessages(maxMessages)
+                .build();
+    }
+
+    @Bean
+    ChatClient chatClient(ChatClient.Builder builder, ChatMemory chatMemory) {
         return builder
                 .defaultSystem(SYSTEM_PROMPT)
+                .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
                 .build();
     }
 }
