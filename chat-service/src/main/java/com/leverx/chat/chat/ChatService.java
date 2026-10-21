@@ -7,10 +7,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
-import java.time.DateTimeException;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -28,8 +25,7 @@ public class ChatService {
     }
 
     /**
-     * Asks the model and waits for the whole answer, which is returned as a single chunk of the stream the UI reads.
-     * Every message is answered on its own: the model does not see earlier messages.
+     * Streams the assistant answer. Every message is answered on its own: the model does not see earlier messages.
      */
     public Flux<String> stream(Jwt user, String message, String timeZone) {
         if (!apiKeyConfigured) {
@@ -37,16 +33,16 @@ public class ChatService {
                     "Gemini API key is not configured. Set GEMINI_API_KEY for chat-service and restart it.");
         }
         var zone = resolveZone(timeZone);
-        var answer = chatClient.prompt()
+        return chatClient.prompt()
                 .system(s -> s
                         .param("userName", String.valueOf(user.getClaimAsString("name")))
                         .param("userEmail", String.valueOf(user.getClaimAsString("email")))
                         .param("now", ZonedDateTime.now(zone).format(DateTimeFormatter.ofPattern("EEEE, yyyy-MM-dd HH:mm")))
                         .param("timeZone", zone.getId()))
                 .user(message)
-                .call()
-                .content();
-        return Flux.just(answer);
+                .stream()
+                .content()
+                .delayElements(Duration.ofMillis(70));
     }
 
     /**
