@@ -1,18 +1,21 @@
 package com.leverx.chat.chat;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.security.oauth2.jwt.Jwt;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 
 class ChatServiceTest {
 
-    private final ChatService chatService = new ChatService();
-
     @Test
-    void echoesMessageUntilAiIsConnected() {
-        assertThat(chatService.stream(user("1"), "hi", "Europe/Warsaw").collectList().block())
-                .containsExactly("AI is not connected yet. You said: hi");
+    void rejectsChatWhenApiKeyIsNotConfigured() {
+        var service = new ChatService(mock(ChatClient.class), ChatService.API_KEY_PLACEHOLDER);
+
+        assertThatThrownBy(() -> service.stream(user("1"), "hi", "Europe/Warsaw"))
+                .isInstanceOf(ChatUnavailableException.class)
+                .hasMessageContaining("GEMINI_API_KEY");
     }
 
     private static Jwt user(String id) {
