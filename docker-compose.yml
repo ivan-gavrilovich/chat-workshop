@@ -1,0 +1,88 @@
+services:
+  auth-db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: auth
+      POSTGRES_USER: auth
+      POSTGRES_PASSWORD: auth
+    ports:
+      - "5433:5432"
+    volumes:
+      - authdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth -d auth"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  auth-service:
+    build: ./auth-service
+    environment:
+      DB_URL: jdbc:postgresql://auth-db:5432/auth
+      DB_USERNAME: auth
+      DB_PASSWORD: auth
+      JWT_ISSUER: room-booking-auth
+      JWT_TTL: 8h
+    ports:
+      - "8081:8081"
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 20s
+
+  chat-db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: chat
+      POSTGRES_USER: chat
+      POSTGRES_PASSWORD: chat
+    ports:
+      - "5434:5432"
+    volumes:
+      - chatdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chat -d chat"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  chat-service:
+    build: ./chat-service
+    environment:
+      DB_URL: jdbc:postgresql://chat-db:5432/chat
+      DB_USERNAME: chat
+      DB_PASSWORD: chat
+      AUTH_JWKS_URI: http://auth-service:8081/.well-known/jwks.json
+      JWT_ISSUER: room-booking-auth
+    ports:
+      - "8082:8082"
+    depends_on:
+      chat-db:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 20s
+
+  chat-ui:
+    build: ./chat-ui
+    ports:
+      - "3001:80"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      chat-service:
+        condition: service_healthy
+
+volumes:
+  authdata:
+  chatdata:

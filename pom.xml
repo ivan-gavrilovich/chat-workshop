@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Aggregator for the Java services, so the whole repository can be opened/imported as one Maven project
+  (e.g. in IntelliJ IDEA) and built with a single `./mvnw verify` from the root.
+  Each service stays a standalone Spring Boot project with its own parent and wrapper (used by the Dockerfiles).
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.leverx</groupId>
+	<artifactId>chat-workshop</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+	<name>chat-workshop</name>
+
+	<modules>
+		<module>auth-service</module>
+		<module>chat-service</module>
+	</modules>
+</project>
