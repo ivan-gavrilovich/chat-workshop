@@ -2,6 +2,7 @@ package com.leverx.chat.config;
 
 import com.google.genai.Client;
 import com.google.genai.types.HttpOptions;
+import com.leverx.chat.tools.ServerToolsService;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -19,8 +20,10 @@ public class ChatConfig {
     static final String SYSTEM_PROMPT = """
             You are the assistant tasked with helping the developers in maintaining the application.
             You help developers with questions about debugging errors and checking system resources.
-            You cannot access the resources use and error data yet: if the user asks to do so,
-            explain how to do it from terminal (check utilization via terminal utils for linux and check error reports by directly connecting to postgresql database at port 5434) and say that access to this information through chat is coming soon.
+            You should use info available to you to draw conclusions regarding system errors and predict reasons.
+            You can use tool getServerResourceLoad to get service resource utilization.
+            You can use tool getRecentErrorReports to check recent error reports.
+            Do not invent tool use results. If a tool fails, say so.
             Be concise and friendly. Use Markdown for lists and code when helpful.
 
             The user you are talking to is {userName} ({userEmail}).
@@ -49,10 +52,11 @@ public class ChatConfig {
     }
 
     @Bean
-    ChatClient chatClient(ChatClient.Builder builder, ChatMemory chatMemory) {
+    ChatClient chatClient(ChatClient.Builder builder, ChatMemory chatMemory, ServerToolsService serverTools) {
         return builder
                 .defaultSystem(SYSTEM_PROMPT)
                 .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
+                .defaultTools(serverTools)
                 .build();
     }
 }
